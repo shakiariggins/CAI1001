@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Review Analyzer Robot Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; 
+            color: #c9d1d9;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .mistake-bar {
+            height: 1.5rem;
+            transition: width 0.5s ease, background-color 0.5s ease;
+            border-radius: 0.25rem;
+        }
+        input[type="number"] {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+            /* Increased width for number inputs to look better in wider container */
+            width: 120px; 
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex justify-center items-start min-h-screen">
+
+    <div class="w-full max-w-5xl">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center mb-8 text-purple-400">
+            🤖 The Learning Robot Challenge
+        </h1>
+        <p class="text-center mb-6 text-gray-400">Help the robot guess the true mood of a review by setting the challenge, making a guess, and letting it learn!</p>
+
+        <!-- Tasks 1 and 2 now take up half the width each on large screens -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- COLUMN 1: TASK 1 - SET THE CHALLENGE (Wider) -->
+            <div class="card h-fit space-y-4 border-l-4 border-yellow-500">
+                <h2 class="text-xl font-semibold text-yellow-300">💡 Task 1: Set the REAL Mood (Target)</h2>
+                <p class="text-sm text-gray-400">What is the true mood of the review? (-1 is Sad, +1 is Happy)</p>
+                
+                <div class="p-3 rounded-lg border border-yellow-600 bg-yellow-900/30">
+                    <label for="moodSlider" class="block text-sm font-medium mb-2">Select Target Mood:</label>
+                    <input type="range" id="moodSlider" min="-1" max="1" step="0.1" value="-0.8" oninput="setTargetMood(this.value)" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg dark:bg-gray-700">
+                    
+                    <div class="flex justify-between text-xs mt-1"><span>Very Sad (-1)</span><span>Neutral (0)</span><span>Very Happy (+1)</span></div>
+
+                    <p class="text-2xl font-extrabold text-yellow-300 mt-3">Target Mood: <span id="realMoodDisplay">-0.80</span></p>
+                    <p id="realMoodText" class="text-sm font-bold text-yellow-400">Very Sad Mood</p>
+                </div>
+
+                <!-- Input Scores Display -->
+                <div class="p-3 rounded-lg border border-blue-600 bg-blue-900/30">
+                    <p class="text-sm font-medium text-blue-300">Review Scores (Input)</p>
+                    <p class="text-lg">Happiness Score: <span id="happinessScore" class="font-bold">0.50</span></p>
+                    <p class="text-lg">Sadness Score: <span id="sadnessScore" class="font-bold">-0.30</span></p>
+                </div>
+            </div>
+
+            <!-- COLUMN 2: TASK 2 - MANUAL GUESS (Wider) -->
+            <div class="card space-y-4 border-l-4 border-pink-500">
+                <h2 class="text-xl font-semibold text-pink-300">🔧 Task 2: Manually Tune the Knobs</h2>
+                <p class="text-sm text-gray-400">Adjust the knobs below to try and make the Robot's Guess match the Target Mood!</p>
+
+                <!-- MANUAL KNOB INPUTS -->
+                <div class="space-y-3 p-3 rounded-lg bg-pink-900/30">
+                    <div>
+                        <label class="block text-sm font-medium text-pink-300 mb-1">Knob 1 (Internal $\to$ Guess)</label>
+                        <input type="number" id="manualKnob1" value="0.50" step="0.01" onchange="manualKnobTune()" class="w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-pink-300 mb-1">Knob 2 (Internal $\to$ Guess)</label>
+                        <input type="number" id="manualKnob2" value="-0.60" step="0.01" onchange="manualKnobTune()" class="w-full">
+                    </div>
+                </div>
+
+                <!-- ROBOT GUESS -->
+                <div class="p-4 rounded-lg border border-teal-600 bg-teal-900/30 text-center">
+                    <p class="text-sm font-medium text-teal-300">Robot's Final Mood Guess</p>
+                    <p id="robotGuessDisplay" class="text-4xl font-extrabold text-teal-400">0.0000</p>
+                    <p id="guessMoodText" class="text-lg font-bold mt-1 text-teal-400">Neutral Mood</p>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- TASK 3 now takes up the full width, making the results easier to read -->
+        <div class="mt-6">
+            <div class="card space-y-4 border-l-4 border-indigo-500">
+                <h2 class="text-xl font-semibold text-indigo-300">🚀 Task 3: Teach the Robot! (Results)</h2>
+                
+                <!-- ACTION BUTTON -->
+                <button onclick="runEpoch()" id="teachButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-200 shadow-lg text-lg">
+                    RUN SELF-CORRECTION (Backprop)
+                </button>
+                <p class="text-xs text-center text-gray-400">This automatically adjusts all the robot's focus knobs to lower the Mistake Score.</p>
+
+                <!-- MISTAKE SCORE VISUALIZATION -->
+                <div class="mt-4">
+                    <p class="font-medium mb-2 text-red-400">Mistake Score (How Wrong?): <span id="mistakeScoreDisplay" class="font-bold text-lg">0.0000</span></p>
+                    <div class="w-full bg-gray-700 rounded-lg">
+                        <div id="mistakeBar" class="mistake-bar" style="width: 0%;"></div>
+                    </div>
+                    <p id="statusMessage" class="text-sm mt-2 text-center text-gray-400">Complete Task 1 & 2 first.</p>
+                </div>
+
+                <div class="p-3 bg-gray-800 rounded-lg mt-4">
+                    <h3 class="font-bold text-lg mb-2 text-fuchsia-400">Latest Knobs Adjustments History</h3>
+                    <div id="knobHistory" class="text-sm space-y-1 max-h-40 overflow-y-auto">
+                        <!-- History will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- COPYRIGHT FOOTER ADDED HERE -->
+    <footer class="w-full max-w-5xl text-center py-4 mt-8 text-xs text-gray-500 border-t border-gray-700">
+        &copy; 2025 copyright by Shakia Riggins. All rights reserved.
+    </footer>
+
+    <script>
+        // --- 1. CORE MATH FUNCTIONS ---
+        const LEARNING_RATE = 0.1;
+        
+        function tanh(x) {
+            return Math.tanh(x);
+        }
+
+        function tanh_derivative(x) {
+            const t = tanh(x);
+            return 1 - t * t;
+        }
+
+        function mse_loss(predicted, actual) {
+            return Math.pow(predicted - actual, 2);
+        }
+
+        // --- 2. GAME STATE (Focus Knobs, Scores) ---
+        // focus_knobs_input_hidden are fixed initially for simplicity, representing the first layer's internal logic
+        let focus_knobs_input_hidden = [[0.4, -0.2], [0.1, 0.3]]; // (2 input, 2 hidden)
+        let focus_knobs_hidden_output = [[0.5], [-0.6]]; // (2 hidden, 1 output) - MANUALLY ADJUSTED IN TASK 2
+        
+        let bias_hidden = [0.0, 0.0];
+        let bias_output = [0.0];
+        
+        let review_scores = [0.5, -0.3]; // Fixed input review
+        let real_mood = -0.8; // Set by user in Task 1
+        let epoch_count = 0;
+        let isTask2Complete = false;
+
+        // --- 3. HELPER FUNCTIONS FOR 5TH GRADE CONCEPTS ---
+        
+        function getMoodDescription(score) {
+            if (score > 0.8) return "Very Happy Mood 🎉";
+            if (score > 0.4) return "Slightly Happy Mood 😊";
+            if (score > -0.4) return "Neutral Mood 😐";
+            if (score > -0.8) return "Slightly Sad Mood 🙁";
+            return "Very Sad Mood 😭";
+        }
+
+        function setTargetMood(value) {
+            real_mood = parseFloat(value);
+            document.getElementById('realMoodDisplay').textContent = real_mood.toFixed(2);
+            document.getElementById('realMoodText').textContent = getMoodDescription(real_mood);
+            updateDisplay();
+        }
+
+        function manualKnobTune() {
+            const knob1 = parseFloat(document.getElementById('manualKnob1').value);
+            const knob2 = parseFloat(document.getElementById('manualKnob2').value);
+
+            // Update the game state with manual values
+            focus_knobs_hidden_output[0][0] = isNaN(knob1) ? 0 : knob1;
+            focus_knobs_hidden_output[1][0] = isNaN(knob2) ? 0 : knob2;
+            
+            isTask2Complete = true; // Mark Task 2 as completed after user interaction
+            updateDisplay();
+        }
+
+        // --- 4. FORWARD PROPAGATION (The Robot Guesses) ---
+        let internal_mood, robot_guess, hidden_input, final_input;
+
+        function runForwardPass() {
+            // 1. Scores -> Internal Mood (Hidden Layer)
+            hidden_input = [
+                review_scores[0] * focus_knobs_input_hidden[0][0] + review_scores[1] * focus_knobs_input_hidden[1][0] + bias_hidden[0],
+                review_scores[0] * focus_knobs_input_hidden[0][1] + review_scores[1] * focus_knobs_input_hidden[1][1] + bias_hidden[1]
+            ];
+            internal_mood = hidden_input.map(tanh);
+
+            // 2. Internal Mood -> Final Guess (Output Layer)
+            final_input = internal_mood[0] * focus_knobs_hidden_output[0][0] + internal_mood[1] * focus_knobs_hidden_output[1][0] + bias_output[0];
+            robot_guess = tanh(final_input);
+
+            return { internal_mood, robot_guess, hidden_input, final_input };
+        }
+
+        // --- 5. BACKPROPAGATION (The Robot Self-Corrects) - TASK 3 ---
+        function runEpoch() {
+            if (!isTask2Complete) {
+                document.getElementById('statusMessage').textContent = "Please complete Task 2 (Manually Tune the Knobs) first!";
+                document.getElementById('statusMessage').className = 'text-sm mt-2 text-center text-red-400 font-bold';
+                return;
+            }
+            
+            epoch_count++;
+            
+            const { internal_mood, robot_guess, hidden_input, final_input } = runForwardPass();
+
+            const mistake_score = mse_loss(robot_guess, real_mood);
+            const error = robot_guess - real_mood;
+            
+            // 1. Calculate error gradient for output layer
+            const d_loss_d_output = 2 * error; 
+            const d_output = d_loss_d_output * tanh_derivative(final_input); 
+            
+            // Capture old knob values for back-propagation calculation
+            const old_who_0 = focus_knobs_hidden_output[0][0];
+            const old_who_1 = focus_knobs_hidden_output[1][0];
+            
+            // 2. Adjust the Final Layer's Focus Knobs (Internal -> Guess)
+            let adjustment_who_0 = 0;
+            let adjustment_who_1 = 0;
+
+            for (let i = 0; i < focus_knobs_hidden_output.length; i++) {
+                const dL_dW_ho = d_output * internal_mood[i];
+                const adjustment = LEARNING_RATE * dL_dW_ho;
+                focus_knobs_hidden_output[i][0] -= adjustment;
+                
+                if (i === 0) adjustment_who_0 = adjustment;
+                else adjustment_who_1 = adjustment;
+            }
+            bias_output[0] -= LEARNING_RATE * d_output;
+
+            // 3. Propagate mistake back to the hidden layer
+            const d_hidden = [];
+            
+            // Calculate d_hidden[0] using the old knob for mood 1
+            const d_hidden_error_0 = d_output * old_who_0; 
+            d_hidden[0] = d_hidden_error_0 * tanh_derivative(hidden_input[0]);
+
+            // Calculate d_hidden[1] using the old knob for mood 2
+            const d_hidden_error_1 = d_output * old_who_1;
+            d_hidden[1] = d_hidden_error_1 * tanh_derivative(hidden_input[1]);
+
+            // 4. Adjust the First Layer's Focus Knobs (Input -> Internal Moods)
+            for (let i = 0; i < focus_knobs_input_hidden.length; i++) { 
+                for (let j = 0; j < focus_knobs_input_hidden[i].length; j++) { 
+                    const dL_dW_ih = d_hidden[j] * review_scores[i];
+                    focus_knobs_input_hidden[i][j] -= LEARNING_RATE * dL_dW_ih;
+                }
+            }
+            
+            // 5. Update bias for hidden layer
+            for (let i = 0; i < bias_hidden.length; i++) {
+                bias_hidden[i] -= LEARNING_RATE * d_hidden[i];
+            }
+
+            // Update UI with the new, optimized focus knobs
+            updateDisplay(mistake_score);
+            logAdjustmentHistory(adjustment_who_0, adjustment_who_1);
+
+            // Update manual input fields to show the new learned values
+            document.getElementById('manualKnob1').value = focus_knobs_hidden_output[0][0].toFixed(4);
+            document.getElementById('manualKnob2').value = focus_knobs_hidden_output[1][0].toFixed(4);
+
+            if (mistake_score < 0.001) {
+                document.getElementById('statusMessage').textContent = "PERFECT! The robot has learned this mood perfectly!";
+                document.getElementById('teachButton').disabled = true;
+            }
+        }
+
+        // --- 6. UI RENDERING AND LOGIC ---
+
+        function logAdjustmentHistory(adj0, adj1) {
+            const historyDiv = document.getElementById('knobHistory');
+            const p = document.createElement('p');
+            const who0 = focus_knobs_hidden_output[0][0].toFixed(4);
+            const who1 = focus_knobs_hidden_output[1][0].toFixed(4);
+
+            p.className = 'text-yellow-400 font-mono text-xs border-b border-gray-700 pb-1';
+            p.innerHTML = `Step ${epoch_count}: Knobs $\to$ Guess adjusted from ($\Delta$${adj0.toFixed(4)}, $\Delta$${adj1.toFixed(4)}) to [${who0}, ${who1}].`;
+            
+            historyDiv.prepend(p);
+            
+            while (historyDiv.children.length > 8) {
+                historyDiv.removeChild(historyDiv.lastChild);
+            }
+        }
+
+        function updateDisplay() {
+            const result = runForwardPass();
+            const { internal_mood, robot_guess } = result;
+            const current_mistake = mse_loss(robot_guess, real_mood);
+
+            // Update Prediction and Knobs
+            document.getElementById('robotGuessDisplay').textContent = robot_guess.toFixed(4);
+            document.getElementById('guessMoodText').textContent = getMoodDescription(robot_guess);
+            
+            document.getElementById('internalMood1').textContent = internal_mood[0].toFixed(4);
+            document.getElementById('internalMood2').textContent = internal_mood[1].toFixed(4);
+
+            // Update Mistake Score and Visuals
+            document.getElementById('mistakeScoreDisplay').textContent = current_mistake.toFixed(6);
+            
+            const mistakeBar = document.getElementById('mistakeBar');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            // Scale bar width based on a maximum possible loss (max |1 - (-1)|^2 = 4, but we'll scale visually to 1.0 for simplicity)
+            const maxLoss = 1.0; 
+            const widthPercent = Math.min((current_mistake / maxLoss) * 100, 100);
+            mistakeBar.style.width = `${widthPercent}%`;
+            
+            if (current_mistake < 0.001) {
+                mistakeBar.className = 'mistake-bar bg-green-500';
+                statusMessage.textContent = `SUCCESS! The Robot guessed ${robot_guess.toFixed(4)} and is now an expert!`;
+                statusMessage.className = 'text-sm mt-2 text-center text-green-400 font-bold';
+            } else if (current_mistake < 0.1) {
+                mistakeBar.className = 'mistake-bar bg-yellow-500';
+                statusMessage.textContent = `Mistake Score is low! The guess is close. Now run self-correction!`;
+                statusMessage.className = 'text-sm mt-2 text-center text-yellow-400';
+            } else {
+                mistakeBar.className = 'mistake-bar bg-red-600';
+                if (!isTask2Complete) {
+                     statusMessage.textContent = "Adjust the knobs in Task 2 to make your initial guess!";
+                } else {
+                    statusMessage.textContent = "Mistake Score is high! Click 'RUN SELF-CORRECTION' to teach the robot.";
+                }
+                statusMessage.className = 'text-sm mt-2 text-center text-red-400';
+            }
+        }
+
+        // --- 7. INITIALIZATION ---
+        window.onload = () => {
+            setTargetMood(document.getElementById('moodSlider').value);
+            document.getElementById('manualKnob1').value = focus_knobs_hidden_output[0][0].toFixed(2);
+            document.getElementById('manualKnob2').value = focus_knobs_hidden_output[1][0].toFixed(2);
+            updateDisplay(); 
+        };
+
+    </script>
+</body>
+</html>
