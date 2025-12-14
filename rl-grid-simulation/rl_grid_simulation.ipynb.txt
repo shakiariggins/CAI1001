@@ -1,0 +1,159 @@
+# Cell 1: Setup and Initialization
+
+import random
+from IPython.display import display, HTML
+
+# --- ENVIRONMENT PARAMETERS ---
+GRID_SIZE = 5
+START_POS = (0, 0)
+GOAL_POS = (GRID_SIZE - 1, GRID_SIZE - 1)  # (4, 4)
+MAX_STEPS = 30 # Limit steps per episode for demonstration
+
+# --- ACTIONS ---
+# (dr, dc) = change in (row, column)
+ACTIONS = {
+    'UP': (-1, 0),
+    'DOWN': (1, 0),
+    'LEFT': (0, -1),
+    'RIGHT': (0, 1)
+}
+ACTION_KEYS = list(ACTIONS.keys())
+
+# --- REWARDS ---
+REWARDS = {
+    'GOAL': +10,
+    'MOVE': -1,
+    'WALL_HIT': -5
+}
+
+print("RL Environment Setup Complete:")
+print(f"Grid Size: {GRID_SIZE}x{GRID_SIZE}")
+print(f"Start: {START_POS}, Goal: {GOAL_POS}")
+print(f"Rewards: Goal={REWARDS['GOAL']}, Move={REWARDS['MOVE']}, Wall Hit={REWARDS['WALL_HIT']}")
+
+
+# Cell 2: Helper Functions
+
+def draw_grid(robot_pos, history_log):
+    """
+    Creates an HTML table representation of the grid for visual output in Jupyter.
+    Uses colors and symbols to show Start (S), Goal (G), and Robot (R).
+    """
+    html_output = '<table style="border-collapse: collapse; border: 3px solid #333;">'
+    for r in range(GRID_SIZE):
+        html_output += '<tr>'
+        for c in range(GRID_SIZE):
+            pos = (r, c)
+            style = 'width:40px; height:40px; text-align:center; font-weight:bold; border:1px solid #ccc; font-size: 16px;'
+            
+            # --- Determine Cell Content and Color ---
+            content = ''
+            color = '#f0f0f0'
+
+            if pos == START_POS:
+                content = 'S'
+                color = '#3498db' # Blue
+            if pos == GOAL_POS:
+                content = 'G'
+                color = '#2ecc71' # Green
+
+            # Check if the cell was visited (excluding current robot spot)
+            if pos in [h[1] for h in history_log] and pos != robot_pos:
+                 color = '#f1c40f50' # Light Yellow trail
+
+            # Current Robot Position overrides all others
+            if pos == robot_pos:
+                content = 'R'
+                color = '#e74c3c' # Red
+                style += 'transform: scale(1.1);' # Highlight robot
+
+            html_output += f'<td style="{style} background-color:{color};">{content}</td>'
+        html_output += '</tr>'
+    html_output += '</table>'
+    display(HTML(html_output))
+
+
+def simulate_move(current_pos, action):
+    """Calculates the next position and the reward based on the action."""
+    
+    # Calculate potential new coordinates
+    dr, dc = ACTIONS[action]
+    new_r = current_pos[0] + dr
+    new_c = current_pos[1] + dc
+    
+    # Check for wall hit (boundary conditions)
+    if not (0 <= new_r < GRID_SIZE and 0 <= new_c < GRID_SIZE):
+        # Wall Hit: position does not change
+        return current_pos, REWARDS['WALL_HIT'], "Hit Wall"
+    
+    next_pos = (new_r, new_c)
+    
+    # Check for Goal
+    if next_pos == GOAL_POS:
+        return next_pos, REWARDS['GOAL'], "Reached Goal!"
+    
+    # Regular Move
+    return next_pos, REWARDS['MOVE'], "Moved"
+
+# Cell 3: Run the Simulation and Generate Synthetic Data
+
+def run_rl_simulation():
+    """
+    Runs one episode of the robot trying to reach the goal using random actions.
+    Records the experience to generate the synthetic training data.
+    """
+    print("--- STARTING EPISODE (RANDOM EXPLORATION) ---")
+    current_pos = START_POS
+    episode_data = []  # This will be the Synthetic Data Log
+    
+    # Initialize history for visualization
+    history_pos = []
+    
+    step_count = 0
+    
+    while current_pos != GOAL_POS and step_count < MAX_STEPS:
+        
+        step_count += 1
+        
+        # 1. Choose a random action (Naive Policy)
+        action = random.choice(ACTION_KEYS)
+        
+        # 2. Simulate the move and get feedback
+        next_pos, reward, outcome_msg = simulate_move(current_pos, action)
+        
+        # 3. RECORD THE SYNTHETIC DATA POINT
+        # Data structure: (Step, Current Pos, Action, Next Pos, Reward, Outcome)
+        data_point = (step_count, current_pos, action, next_pos, reward, outcome_msg)
+        episode_data.append(data_point)
+        
+        # 4. VISUALIZE THE MOVEMENT
+        print(f"\nStep {step_count}: Action={action}, Reward={reward}")
+        history_pos.append(current_pos)
+        draw_grid(next_pos, history_pos)
+        
+        # Update state
+        current_pos = next_pos
+        
+    print("\n--- EPISODE FINISHED ---")
+    if current_pos == GOAL_POS:
+        print(f"SUCCESS! Robot reached the goal in {step_count} steps.")
+    else:
+        print(f"FAILED. Robot ran out of steps ({MAX_STEPS} max).")
+
+    return episode_data
+
+# Run the simulation and store the generated data
+synthetic_experience = run_rl_simulation()
+
+# Cell 4: Display the Generated Synthetic Data Log
+
+print("\n--- SYNTHETIC DATA LOG (EXPERIENCE TABLE) ---")
+
+# Format for clear table output
+header = ["Step", "Action", "Current Pos", "Next Pos", "Reward", "Outcome"]
+print("| " + " | ".join(header) + " |")
+print("|" + "---|" * len(header))
+
+# Display each data point generated by the robot's exploration
+for step, c_pos, action, n_pos, reward, outcome in synthetic_experience:
+    print(f"| {step:<4} | {action:<6} | {str(c_pos):<11} | {str(n_pos):<9} | {reward:<6} | {outcome:<11} |")
