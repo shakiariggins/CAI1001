@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RL Grid Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>🤖 RL Robot Trainer: Synthetic Data Generation</h1>
+        <p>Watch the robot (R) explore the 5x5 grid from Start (S) to Goal (G).</p>
+    </header>
+
+    <div id="simulation-container">
+        <div id="grid-container"></div>
+        
+        <div id="controls">
+            <button id="start-button">Start Simulation</button>
+            <button id="reset-button" disabled>Reset</button>
+        </div>
+    </div>
+
+    <div id="log-container">
+        <h2>Experience Log (Synthetic Data)</h2>
+        <table id="log-table">
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Action</th>
+                    <th>Current Pos</th>
+                    <th>Next Pos</th>
+                    <th>Reward</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <footer>
+        <p>Reinforcement Learning Activity: Data generated through trial and error.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
